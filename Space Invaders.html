@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Celestial Immigrators</title>
+  <style>
+    /* CSS styles */
+    body {
+      background-color: #000;
+      margin: 0;
+      overflow: hidden;
+    }
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      background-color: #000;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <!-- Sound effects -->
+  <audio id="shootSound" src="lazer.mp3" preload="auto"></audio>
+  <audio id="explosionSound" src="explosion.wav" preload="auto"></audio>
+
+  <script>
+    // JavaScript code
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Player
+    const playerWidth = 100;
+    const playerHeight = 100; // Adjusted height for the player image
+    const playerSpeed = 5;
+    let playerX = canvas.width / 2 - playerWidth / 2;
+    const playerY = canvas.height - 100; // Adjusted player position
+    const playerImage = new Image();
+    playerImage.src = 'spaceship.png'; // Replace 'spaceship.png' with the path to your player image
+
+    // Bullets
+    const bulletWidth = 5;
+    const bulletHeight = 10;
+    const bulletSpeed = 7;
+    let bullets = [];
+
+    // Enemy
+    const enemyWidth = 100; // Adjusted width for the enemy image
+    const enemyHeight = 100; // Adjusted height for the enemy image
+    const enemySpeed = 1; // Decreased enemy speed
+    let enemies = [];
+    const enemyImage = new Image();
+    enemyImage.src = 'enemy.png'; // Replace 'enemy.png' with the path to your enemy image
+
+    // Controls
+    let leftPressed = false;
+    let rightPressed = false;
+    let spacePressed = false;
+
+    let isGameOver = false;
+
+    // Sound effects
+    const shootSound = document.getElementById('shootSound');
+    const explosionSound = document.getElementById('explosionSound');
+
+    function drawPlayer() {
+      ctx.drawImage(playerImage, playerX, playerY, playerWidth, playerHeight);
+    }
+
+    function movePlayer() {
+      if (leftPressed && playerX > 0) {
+        playerX -= playerSpeed;
+      }
+      if (rightPressed && playerX < canvas.width - playerWidth) {
+        playerX += playerSpeed;
+      }
+    }
+
+    function drawBullets() {
+      bullets.forEach(bullet => {
+        ctx.beginPath();
+        ctx.rect(bullet.x, bullet.y, bulletWidth, bulletHeight);
+        ctx.fillStyle = "#fff";
+        ctx.fill();
+        ctx.closePath();
+      });
+    }
+
+    function moveBullets() {
+      bullets.forEach(bullet => {
+        bullet.y -= bulletSpeed;
+      });
+      bullets = bullets.filter(bullet => bullet.y > 0);
+    }
+
+    function drawEnemies() {
+      enemies.forEach(enemy => {
+        ctx.drawImage(enemyImage, enemy.x, enemy.y, enemyWidth, enemyHeight);
+      });
+    }
+
+    function moveEnemies() {
+      enemies.forEach((enemy, index) => {
+        enemy.y += enemySpeed;
+        if (enemy.y >= canvas.height) {
+          // Enemy has reached the bottom of the screen
+          if (!isGameOver) {
+            gameOver();
+          }
+        }
+        if (
+          playerX < enemy.x + enemyWidth &&
+          playerX + playerWidth > enemy.x &&
+          playerY < enemy.y + enemyHeight &&
+          playerY + playerHeight > enemy.y
+        ) {
+          // Player is hit by enemy
+          if (!isGameOver) {
+            explosionSound.play();
+            gameOver();
+          }
+        }
+      });
+      enemies = enemies.filter(enemy => enemy.y < canvas.height);
+    }
+
+    function spawnEnemy() {
+      enemies.push({
+        x: Math.random() * (canvas.width - enemyWidth),
+        y: -enemyHeight
+      });
+    }
+
+    function shoot() {
+      bullets.push({
+        x: playerX + playerWidth / 2 - bulletWidth / 2,
+        y: playerY
+      });
+      shootSound.play(); // Play shoot sound effect
+    }
+
+    function checkCollisions() {
+      bullets.forEach((bullet, bulletIndex) => {
+        enemies.forEach((enemy, enemyIndex) => {
+          if (
+            bullet.x < enemy.x + enemyWidth &&
+            bullet.x + bulletWidth > enemy.x &&
+            bullet.y < enemy.y + enemyHeight &&
+            bullet.y + bulletHeight > enemy.y
+          ) {
+            // Bullet hits enemy
+            bullets.splice(bulletIndex, 1);
+            enemies.splice(enemyIndex, 1);
+            spawnEnemy(); // Spawn one enemy
+            spawnEnemy(); // Spawn another enemy
+            explosionSound.play(); // Play explosion sound effect
+          }
+        });
+      });
+    }
+
+    function gameOver() {
+      isGameOver = true;
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Display game over message
+      ctx.font = "30px Arial";
+      ctx.fillStyle = "#fff";
+      ctx.fillText("Game Over", canvas.width / 2 - 80, canvas.height / 2);
+    }
+
+    function draw() {
+      if (!isGameOver) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        drawPlayer();
+        movePlayer();
+
+        drawBullets();
+        moveBullets();
+
+        drawEnemies();
+        moveEnemies();
+
+        checkCollisions();
+
+        requestAnimationFrame(draw);
+      }
+    }
+
+    // Controls
+    document.addEventListener('keydown', keyDownHandler, false);
+    document.addEventListener('keyup', keyUpHandler, false);
+
+    function keyDownHandler(e) {
+      if (!isGameOver) {
+        if (e.key === "Left" || e.key === "ArrowLeft") {
+          leftPressed = true;
+        } else if (e.key === "Right" || e.key === "ArrowRight") {
+          rightPressed = true;
+        } else if (e.key === " ") {
+          if (!spacePressed) {
+            shoot();
+            spacePressed = true;
+          }
+        }
+      }
+    }
+
+    function keyUpHandler(e) {
+      if (!isGameOver) {
+        if (e.key === "Left" || e.key === "ArrowLeft") {
+          leftPressed = false;
+        } else if (e.key === "Right" || e.key === "ArrowRight") {
+          rightPressed = false;
+        } else if (e.key === " ") {
+          spacePressed = false;
+        }
+      }
+    }
+
+    // Spawn initial enemy
+    spawnEnemy();
+    draw();
+  </script>
+</body>
+</html>
